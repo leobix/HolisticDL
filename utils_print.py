@@ -60,8 +60,6 @@ def print_metrics(sess, model, nat_dict, val_dict, test_dict, ii, args, summary_
         print('    Non zero W1 features percentage', Non_zero_W1)
         print('    Non zero W2 features percentage', Non_zero_W2)
         print('    Non zero W3 features percentage', Non_zero_W3)
-        #print('    Debugging: sum of W3', sum(sess.run(model.W3)))
-        #print('    Debugging: sum of log_a_W3', sum(sess.run(model.log_a_W3)))
         regularizer = sess.run(model.regularizer, feed_dict=nat_dict)
         print('    Regularizer', regularizer)
 
@@ -147,17 +145,15 @@ def print_stability_measures(dict_exp, args, num_experiments, batch_size, subset
     gini_stability = total_gini(dict_exp['preds'].transpose())
     print("  Gini stability", gini_stability)
 
-    if args.model == "ff":
-        w1_stability, w2_stability, w3_stability = print_layer_stability_ff(dict_exp)
-        W1_non_zero = np.mean(dict_exp['W1_non_zero'])
-        W2_non_zero = np.mean(dict_exp['W2_non_zero'])
-        W3_non_zero = np.mean(dict_exp['W3_non_zero'])
-        print(' W1 non zero percentage', W1_non_zero)
-        print(' W2 non zero percentage', W2_non_zero)
-        print(' W3 non zero percentage', W3_non_zero)
-    elif args.model == "cnn":
-        conv11_stability, conv12_stability, conv21_stability, conv22_stability, conv31_stability, conv32_stability, fc1_stability, fc2_stability = print_layer_stability_cnn(dict_exp)
 
+    w1_stability, w2_stability, w3_stability = print_layer_stability_ff(dict_exp)
+    W1_non_zero = np.mean(dict_exp['W1_non_zero'])
+    W2_non_zero = np.mean(dict_exp['W2_non_zero'])
+    W3_non_zero = np.mean(dict_exp['W3_non_zero'])
+    print(' W1 non zero percentage', W1_non_zero)
+    print(' W2 non zero percentage', W2_non_zero)
+    print(' W3 non zero percentage', W3_non_zero)
+    
     file = open(str('results_' + args.model + args.data_set + '.csv'), 'a+', newline='')
     with file:
         writer = csv.writer(file)
@@ -168,13 +164,6 @@ def print_stability_measures(dict_exp, args, num_experiments, batch_size, subset
                 w3_stability, logit_stability, gini_stability, args.l2, args.l0, W1_non_zero, W2_non_zero, W3_non_zero, args.l1_size, args.l2_size,
                 args.lr, dict_exp['W1_killed_input_features'], dict_exp['W1_killed_neurons'], dict_exp['W2_killed_input_features'], dict_exp['W2_killed_neurons'],
                 dict_exp['W3_killed_input_features'], dict_exp['W3_killed_neurons']])
-
-        elif args.model == "cnn":
-            writer.writerow(
-                [args.stable, args.robust, num_experiments, args.train_size, batch_size, subset_ratio, avg_test_acc, dict_exp['test_accs'], std,
-                 dict_exp['thetas'], max_num_training_steps, dict_exp['iterations'], conv11_stability, conv12_stability, conv21_stability,
-                 conv22_stability, conv31_stability, conv32_stability, fc1_stability, fc2_stability, logit_stability,
-                 gini_stability, args.l2, args.l0, args.robust])
 
 
 def print_layer_stability_ff(dict_exp):

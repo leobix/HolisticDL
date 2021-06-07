@@ -49,21 +49,6 @@ def create_dict(args, num_classes, train_shape, test_size):
     dict_exp['W3_killed_neurons'] = 0
     dict_exp['adv_test_accs'] = {eps_test: np.zeros(config['num_experiments']) for eps_test in args.robust_test}
 
-
-    if args.model == "cnn":
-        pixels_x = train_shape[1]
-        pixels_y = train_shape[2]
-        num_channels = train_shape[3]
-        dict_exp['conv11_acc'] = np.zeros((config['num_experiments'], 3 * 3 * num_channels * args.cnn_size))
-        dict_exp['conv12_acc'] = np.zeros((config['num_experiments'], 3 * 3 * args.cnn_size * args.cnn_size))
-        dict_exp['conv21_acc'] = np.zeros((config['num_experiments'], 3 * 3 * args.cnn_size * args.cnn_size))
-        dict_exp['conv22_acc'] = np.zeros((config['num_experiments'], 3 * 3 * args.cnn_size * args.cnn_size))
-        dict_exp['conv31_acc'] = np.zeros((config['num_experiments'], 3 * 3 * args.cnn_size * args.cnn_size))
-        dict_exp['conv32_acc'] = np.zeros((config['num_experiments'], 3 * 3 * args.cnn_size * args.cnn_size))
-        dict_exp['fc1_acc'] = np.zeros((config['num_experiments'], int((int(int((pixels_x + 1) / 2) + 1) / 2 + 1) / 2) * int(
-            (int(int((pixels_y + 1) / 2) + 1) / 2 + 1) / 2) * args.cnn_size * args.fc_size))
-        dict_exp['fc2_acc'] = np.zeros((config['num_experiments'], args.fc_size * 10))
-
     return dict_exp
 
 
@@ -100,17 +85,6 @@ def update_dict(dict_exp, args, sess, model, test_dict, experiment):
             dict_exp['W2_non_zero'] = sum(sess.run(model.W2).reshape(-1) > 0) / sess.run(model.W2).reshape(-1).shape[0]
             dict_exp['W3_non_zero'] = sum(sess.run(model.W3).reshape(-1) > 0) / sess.run(model.W3).reshape(-1).shape[0]
 
-    elif args.model == "cnn":
-
-        dict_exp['conv11_acc'][experiment] = sess.run(model.conv11.kernel).reshape(-1)
-        dict_exp['conv12_acc'][experiment] = sess.run(model.conv12.kernel).reshape(-1)
-        dict_exp['conv21_acc'][experiment] = sess.run(model.conv21.kernel).reshape(-1)
-        dict_exp['conv22_acc'][experiment] = sess.run(model.conv22.kernel).reshape(-1)
-        dict_exp['conv31_acc'][experiment] = sess.run(model.conv31.kernel).reshape(-1)
-        dict_exp['conv32_acc'][experiment] = sess.run(model.conv32.kernel).reshape(-1)
-        dict_exp['fc1_acc'][experiment] = sess.run(model.fc1.kernel).reshape(-1)
-        dict_exp['fc2_acc'][experiment] = sess.run(model.fc2.kernel).reshape(-1)
-
     dict_exp['logits_acc'][experiment] = sess.run(model.logits, feed_dict=test_dict)
     dict_exp['preds'][experiment] = sess.run(model.y_pred, feed_dict=test_dict)
 
@@ -130,22 +104,6 @@ def get_best_model(dict_exp, experiment, args, num_classes, num_subsets, batch_s
         from NN_model import Model
         W = [[W1, b1], [W2, b2], [W3, b3], theta_val, [log_a1, log_a2, log_a3]]
         best_model = Model(num_classes, num_subsets, batch_size, args.l1_size, args.l2_size, subset_ratio, num_features, args.dropout, args.l2, args.l0, args.robust, args.reg_stability, W)
-        return best_model
-    
-    elif args.model == "cnn":
-        conv11 = dict_exp['conv11_acc'][experiment]
-        conv12 = dict_exp['conv12_acc'][experiment]
-        conv21 = dict_exp['conv21_acc'][experiment]
-        conv22 = dict_exp['conv22_acc'][experiment]
-        conv31 = dict_exp['conv31_acc'][experiment]
-        conv32 = dict_exp['conv32_acc'][experiment]
-        fc1 = dict_exp['fc1_acc'][experiment]
-        fc2 = dict_exp['fc2_acc'][experiment]
-        theta_val = dict_exp['thetas'][experiment]
-
-        from CNN_model import Model
-        W = [conv11, conv12, conv21, conv22, conv31, conv32, fc1, fc2, theta_val]
-        best_model = Model(num_subsets, batch_size, args.cnn_size, args.fc_size, subset_ratio, pixels_x, pixels_y, num_channels, args.dropout, args.l2, theta, args.robust, W)
         return best_model
 
 

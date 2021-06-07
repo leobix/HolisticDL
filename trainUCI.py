@@ -23,9 +23,6 @@ import argparse
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument("--gnum", type=int, default=1, help='which gen param of 72 [0,71]')
-parser.add_argument("--mnum", type=int, default=1, help='which method/data of 34 [0,14]')
-
 parser.add_argument("--batch_range", type=int, nargs='+', default=[64],
                             help="batch range")
 
@@ -56,26 +53,14 @@ parser.add_argument("--l0", type=float, default=0,
 parser.add_argument("--reg_stability", type=float, default=0,
                             help="reg stability regularization rate")
 
-parser.add_argument("--num_subsets", type=int, default=1,
-                            help="number of subsets for Monte Carlo")
-
 parser.add_argument("--l1_size", type=int, default=256,
                             help="number of nodes in the first layer, 784 -> l1_size")
 
 parser.add_argument("--l2_size", type=int, default=128,
                             help="number of nodes in the first layer, l1_size -> l2_size")
 
-parser.add_argument("--cnn_size", type=int, default=32,
-                            help="number of filters in the cnn layers for cnn")
-
-parser.add_argument("--fc_size", type=int, default=128,
-                            help="number of nodes in the dense layer for cnn")
-
 parser.add_argument("--data_set", type=str, default="mnist",
                             help="number of subsets")
-
-parser.add_argument("--MC", action="store_true",
-                            help="Monte Carlo version")
 
 parser.add_argument("--train_size", type=float, default=0.80,
                             help="training percent of the data")
@@ -89,26 +74,9 @@ args = parser.parse_args()
 with open('config.json') as config_file:
     config = json.load(config_file)
     
-    
-gen_param = []
-for batchsize in [64,128,16]:
-    for l_r in [1e-3,1e-4]:
-        for l_2 in [0,1e-5,1e-4,1e-3]:
-            for drop_out in [1,]:
-                for nnsize in [(64,32),(256,128),(128,64)]:
-                    gen_param.append((batchsize,l_r,l_2,drop_out,nnsize))
-                        
+
 ratiorange = 0.8
-gen_param = gen_param[args.gnum]
 
-robust,stable,l0 = -1,-1,-1
-
-rob_range,l0_range = [1e-5,1e-4,1e-3,1e-2,1e-1],[1e-4,1e-5,1e-6]
-combos = [(i,j) for i in rob_range for j in l0_range]
-
-robust=combos[args.mnum][0]
-l0=combos[args.mnum][1]
-stable=0  
     
     
 
@@ -121,27 +89,6 @@ elif args.model == "cnn":
     from CNN_model import Model
     assert(tf.keras.backend.image_data_format() == "channels_last")
 
-
-
-
-args.batch_range = [gen_param[0]]
-args.lr = gen_param[1]
-args.l2 = gen_param[2]
-args.dropout = gen_param[3]
-args.l1_size = gen_param[4][0]
-args.l2_size = gen_param[4][1]
-
-args.robust = robust
-args.stable = stable
-args.l0 = l0
-
-args.ratio_range = [ratiorange]
-args.data_set=args.data_set
-args.MC=False
-
-
-
-
 # Setting up training parameters
 seed = config['random_seed']
 tf.set_random_seed(seed)
@@ -152,57 +99,41 @@ num_checkpoint_steps = config['num_checkpoint_steps']
 testing_size = config['testing_size']
 data_set = args.data_set
 num_subsets = args.num_subsets
-#initial_learning_rate = config['initial_learning_rate']
-eta = config['constant_learning_rate']
-learning_rate = tf.train.exponential_decay(args.lr,
- 0, 5, 0.85, staircase=True)
-theta = args.stable and (not args.MC)
+
+learning_rate = tf.train.exponential_decay(args.lr, 0, 5, 0.85, staircase=True)
+theta = args.stable
 num_channels, pixels_x, pixels_y = 0, 0, 0
 reshape = True
 global_step = tf.Variable(1, name="global_step")
 min_num_training_steps = int(0.4*max_num_training_steps)
+
 if args.robust == 0 and not args.stable and args.l0 == 0:
   min_num_training_steps = 0
-
 
 for batch_size, subset_ratio in itertools.product(args.batch_range, args.ratio_range): #Parameters chosen with validation
   print(batch_size, subset_ratio, args.dropout)
 
 
   #Setting up the data and the model
-  if args.model == "ff":
-      data = input_data.load_data_set(training_size = args.train_size, validation_size=args.val_size, data_set=data_set, reshape=reshape, seed=seed)
-      num_features = data.train.images.shape[1]
-      num_classes = np.unique(data.train.labels).shape[0]
-      model = Model(num_classes, num_subsets, batch_size, args.l1_size, args.l2_size, subset_ratio, num_features, args.dropout, args.l2, args.l0, args.robust, args.reg_stability)
-      var_list = [model.W1, model.b1, model.W2, model.b2, model.W3, model.b3]
-      if args.l0 > 0:
-          var_list = [model.W1, model.log_a_W1, model.b1, model.log_a_W2, model.W2, model.b2, model.W3, model.log_a_W3, model.b3]
-    
-  elif args.model == "cnn":
-      reshape = False
-      data = input_data.load_data_set(training_size = args.train_size, validation_size=args.val_size, data_set=data_set, reshape=reshape, seed=seed)
-      print(data.train.images.shape)
-      num_classes = np.unique(data.train.labels).shape[0]
-      num_features = data.train.images.shape[1]
-      pixels_x = data.train.images.shape[1]
-      pixels_y = data.train.images.shape[2]
-      num_channels = data.train.images.shape[3]
 
-      model = Model(num_subsets, batch_size, args.cnn_size, args.fc_size, subset_ratio, pixels_x, pixels_y, num_channels, args.dropout, args.l2, theta, args.robust)
+  data = input_data.load_data_set(training_size = args.train_size, validation_size=args.val_size, data_set=data_set, reshape=reshape, seed=seed)
+  num_features = data.train.images.shape[1]
+  num_classes = np.unique(data.train.labels).shape[0]
+  model = Model(num_classes, num_subsets, batch_size, args.l1_size, args.l2_size, subset_ratio, num_features, args.dropout, args.l2, args.l0, args.robust, args.reg_stability)
+  var_list = [model.W1, model.b1, model.W2, model.b2, model.W3, model.b3]
+  if args.l0 > 0:
+    var_list = [model.W1, model.log_a_W1, model.b1, model.log_a_W2, model.W2, model.b2, model.W3, model.log_a_W3, model.b3]
 
-
-  #Returns the right loss depending on MC or dual or nothing
+  #Returns the right loss depending on dual stability or nothing
   loss = utils_model.get_loss(model, args)
 
 
   # Setting up the optimizer
-  if (args.stable and not args.MC) or (args.model == "cnn"):
+  if args.stable:
     optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss + model.regularizer, global_step=global_step)
   else:
     optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss + model.regularizer, global_step=global_step, var_list=var_list)
 
-  
   #Initializing loop variables.
   avg_test_acc = 0
   num_experiments = config['num_experiments']
@@ -236,12 +167,8 @@ for batch_size, subset_ratio in itertools.product(args.batch_range, args.ratio_r
 
           for ii in range(max_num_training_steps):
             x_batch, y_batch = data.train.next_batch(batch_size)
-            if args.model == "cnn":
-                y_batch = y_batch.reshape(-1)
             nat_dict = {model.x_input: x_batch,
                         model.y_input: y_batch}
-
-    
             # Output
             if ii % num_output_steps == 0:
 
