@@ -1,51 +1,37 @@
-# HolisticDL
+# HDL
+NOTE: Requires Tensorflow 2 and Keras.
+ Modify parameters in config file with the desired values.
+ To train with stability run train.py
+ To train without stability you need to replace model.max_xent with model.xent inside the Adam Optimizer in file train.py
+ Includes code to visualize Tensorboards.
 
-```train_uci.py``` allows you to train an HDL feed-forward neural network.
+To use the code for montecarlo Stability:
+1) Go to ```Stability```.
 
-Arguments:
+2) Then ```python train.py --subset-ratio 0.8 --num-subsets 5 --batch-size 64```
 
-- batch_range, type=int, default=[64]: help="batch sizes to train the network"
+You can choose these parameters directly from the command line and have more modularity in the config file, but these 3 parameters are the most important a priori.
 
-- ratio_range, type=float, default=[0.8], help="ratio between validation and test set")
+To use the code for dual Stability:
+1) Go to ```StabilityDual```.
 
-- model", "-m", type=str, required=True, choices=["ff", "cnn"],
-                            help="model type, either ff or cnn")
+2) Check the ```config.json``` file to put the desired config.
 
-- stable", action="store_true",
-                            help="stable version")
+3) Then ```python train.py --ratio_range 0.7 0.8 0.9 --batch_range 16 32 64 128 --stable --data_set=cifar --dropout 0.9 --l2 0.1``` for stability or
+```python train.py --ratio_range 0.7 0.8 0.9 --batch_range 16 32 64 128 --data_set=cifar``` for no stability.
 
-- dropout", type=float, default=1,
-                            help="dropout rate, 1 is no dropout, 0 is all set to 0")
+# TODO
 
-- robust", "-r", type=float, default=0,
-                            help="Uncertainty set parameter for training robustness.")
+1) Adapt the code to receive any dataset as input. Discuss what should be the input format: csv?
 
-- robust_test", "-rtest", type=float,  nargs='+', default=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1],
-                            help="Uncertainty set parameter for evaluating robustness.")
+2) Adapt the FF architectures so that the user can choose an arbitrary FF configuration. This will require major changes to the code to make it modular. 
+- will require to adapt all the losses terms and the feedforward operations written manually for now.
+- will require to define new layer classes to call them easily.
+- will require proper logging of all metrics.
 
-- l2", type=float, default=0,
-                            help="l2 regularization rate")
+3) Remove any mention to CNN.
 
-- l0", type=float, default=0,
-                            help="l0 regularization rate")
+4) Remove all unnecessary files.
 
-- reg_stability", type=float, default=0,
-                            help="reg stability regularization rate")
+5) Clean packages and create a requirement.txt and potentially a yaml environment.
 
-- l1_size", type=int, default=256,
-                            help="number of nodes in the first layer, 784 -> l1_size")
-
-- l2_size", type=int, default=128,
-                            help="number of nodes in the first layer, l1_size -> l2_size")
-
-- data_set", type=str, default="mnist",
-                            help="number of subsets")
-
-- train_size", type=float, default=0.80,
-                            help="training percent of the data")
-
-- lr", type=float, default=0.001,
-                            help="Adam lr")
-
-- val_size", type=float, default=0.20,
-                            help="validation percent of the data e.g., 0.25 means 0.25*traning size")
