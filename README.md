@@ -1,6 +1,4 @@
-# HDL
-NOTE: Requires Tensorflow 2 and Keras.
- Modify parameters in config file with the desired values.
+# Holistic Deep Learning
 
 To train a basic feed-forward neural network go to ```src``` and execute:
 ```python train.py --batch_range 64 --network size 256 128 --stab_ratio_range 0.8 --l2 1e-5 --data_set uci10 --train_size 0.8 --lr 3e-4 --val_size 0.2```
@@ -25,6 +23,10 @@ The folder ```utils``` contains:
 - ```utils_init.py```: contains function to load the different arguments.
 - ```utils_MLP_model.py```: contains initialization function for MLP models. Needs to be adapted for CNNs.
 - ```utils.py```: contains miscellaneous elements.
+
+You can modify parameters in the config file with the desired values.
+
+The documentation is a work in progress and will be updated soon.
 
 
 
